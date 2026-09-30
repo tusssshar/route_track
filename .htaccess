@@ -1,0 +1,16 @@
+# Never print PHP errors into responses (they corrupt the JSON returned to the mobile app).
+# For debugging, create an empty ".debug" file in this folder: errors are then logged to logs/php_errors.log
+<IfModule php_module>
+    php_flag display_errors Off
+</IfModule>
+
+# Hide dot-files, git metadata, internal docs and logs
+<FilesMatch "^\.">
+    Require all denied
+</FilesMatch>
+RedirectMatch 404 /(\.git|docs|logs)(/|$)
+
+# Developer scratch files (phpinfo, test pages) are not part of the application
+<FilesMatch "^(phpinfo|test|index1|customer_list_test|config\.local|config\.example)\.php$">
+    Require all denied
+</FilesMatch>

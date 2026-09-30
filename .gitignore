@@ -1,0 +1,19 @@
+# credentials (see libraries/config.example.php)
+config.local.php
+
+# database dumps
+*.sql
+
+# runtime data
+.debug
+logs/*
+!logs/.htaccess
+uploads/*/*
+!uploads/*/.gitkeep
+admin/uploads/import_*
+
+# IDE
+nbproject/private/
+
+# schema + reference data only (no customer data)
+!database/*.sql

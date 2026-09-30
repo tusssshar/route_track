@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html;charset=utf-8">
+<title>jQuery Datepicker</title>
+<link href="css/jquery.datepick.css" rel="stylesheet">
+<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
+<script src="js/jquery.plugin.min.js"></script>
+<script src="js/jquery.datepick.js"></script>
+<script>
+$(function() {
+	$('#popupDatepicker').datepick();
+	$('#inlineDatepicker').datepick({onSelect: showDate});
+});
+
+function showDate(date) {
+	alert('The date chosen is ' + date);
+}
+</script>
+</head>
+<body>
+
+<p>A popup datepicker <input type="text" id="popupDatepicker"></p>
+<p>Or inline</p>
+
+</body>
+</html>
