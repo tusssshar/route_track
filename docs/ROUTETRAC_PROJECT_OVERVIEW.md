@@ -25,7 +25,7 @@ A **delivery / pickup route-management system** for a courier operation. An offi
 | Config | `libraries/config.php` — environment picked by `$_SERVER['SERVER_NAME']`. No `.env`. Credentials hardcoded (incl. a **production password in the non-local branch** and a second one in `functions::masterDBInfo()`). |
 | Sessions | PHP file sessions (`C:\xampp\tmp`), key `routetrac-admin`. |
 | Error handling | `bootstrap.php` sets `error_reporting(0)`. DB errors call `trigger_error(..., E_USER_ERROR)`. |
-| Timezone | `America/Chicago` (web bootstrap), `Asia/Kolkata` (api bootstrap) — inconsistent. |
+| Timezone | `Asia/Kolkata` everywhere (web + api bootstrap; MySQL server is IST). Switched from `America/Chicago` on 2026-10-02. |
 
 ## High-level structure
 

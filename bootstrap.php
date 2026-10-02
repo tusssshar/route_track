@@ -14,14 +14,18 @@
 		ini_set('error_log', __DIR__ . '/logs/php_errors.log');
 	}
 
-	//date_default_timezone_set('Asia/Kolkata');
-	date_default_timezone_set('America/Chicago');
+	// Default until company_settings::apply() loads the client's timezone below
+	date_default_timezone_set('Asia/Kolkata');
 
 	include_once("libraries/config.php");
 	include_once("libraries/dbSqliConnection.php");
 	include_once("libraries/define.php");
 	include_once("libraries/classes/pagination.php");
 	include_once("libraries/classes/functions.php");
+	include_once("libraries/classes/fleet.php");
+	include_once("libraries/classes/company_settings.php");
+	// Company timezone (default India) for PHP and MySQL; currency / units for display
+	company_settings::apply();
 	$functions = new functions();
 	
 	// Every script under /admin/ requires a logged-in admin session
@@ -41,7 +45,8 @@
 	if (strpos($scriptPath, '/admin/') !== false) {
 		$admin_id_params = array('area_id', 'package_type_id', 'cust_id', 'customer_id', 'address_id', 'user_id', 'level_id',
 			'manifest_id', 'delivery_id', 'delete_id', 'temp_delivery_id', 'hidden_delivery_id', 'hidden_manifest_id',
-			'driver_id', 'item_id', 'packages_id', 'package_id', 'default_route_id', 'access_level');
+			'driver_id', 'item_id', 'packages_id', 'package_id', 'default_route_id', 'access_level',
+			'vehicle_id', 'trip_id', 'expense_id');
 		if (strpos($scriptPath, '/m/reports/') === false) {
 			$admin_id_params[] = 'route_id';	// the reports post the route *name* in route_id
 		}

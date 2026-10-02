@@ -1,154 +1,76 @@
 <?php
+/*
+ * Live Fleet Map (menu Map -> Track Drivers).
+ * Running vehicles at their last GPS position with today's track and closed stops, signal age per vehicle,
+ * other drivers' recent positions, auto refresh; History mode draws one driver's track for a date range.
+ * Maps: OpenStreetMap via Leaflet - no Google key or billing needed. Data: ajax/live_positions.php
+ */
 include_once("../../../bootstrap.php");
 include(ROOTPATH . "/admin/authorized.php");
-//include_once(ROOTPATH . "/admin/templates/admin_header_start.php");
+include_once(ROOTPATH . "/admin/templates/admin_header_start.php");
 include_once(ROOTPATH . "/admin/templates/admin_header_end.php");
-$GOOGLE_DeveloperKey = GOOGLE_MAPS_JS_KEY;
-$CURDATE = date("Y-m-d");
-//Check Access Level
+
+// Same users as before (Areas menu) plus everyone with Fleet access
 $res = $functions->user_access_level(1, $_SESSION["routetrac-admin"]["access_level"]);
-
-if ($res == 0) {
-
-    echo "<script>window.location.assign('../../../index.php')</script>";
+$res_fleet = $functions->user_access_level(fleet::FLEET_MENU_ID, $_SESSION["routetrac-admin"]["access_level"]);
+if ($res == 0 && $res_fleet == 0) {
+	echo "<script>window.location.assign('" . SITEROOT . "/admin/home.php')</script>";
+	exit;
 }
-
 $objGlobalConnection1 = new dbSqlConnection();
 $oGlobalConnection = $objGlobalConnection1->Connect(HST, USR, PWD, DBN);
-if (isset($_REQUEST["submit1"])) {
-
-    //echo "<script>location.href='area.php';</script>";
-}
+$drivers = fleet::rows("SELECT user_id, first_name, last_name FROM users WHERE is_driver=1 ORDER BY first_name, last_name");
 ?>
-<link rel="shortcut icon" type="image/x-icon" href="<?php echo SITEROOT; ?>/admin/templates/images/favicon.ico" />
-<link rel="stylesheet" href="<?php echo SITEROOT; ?>/admin/templates/css/bootstrap.min.css">
-<link href="<?= SITEROOT ?>/admin/templates/js/font-awesome-4.6.3/css/font-awesome.min.css" rel="stylesheet">
-<link href="<?php echo SITEROOT; ?>/admin/templates/css/main.css" rel="stylesheet">
-<link href="<?php echo SITEROOT; ?>/admin/templates/css/datetimepicker.css" rel="stylesheet">
-<script>var SITEROOT = '<?php echo SITEROOT; ?>';</script>
-<span class="error-msg" style="display:block;"><?php echo $_SESSION["routetrac-admin"]["error_success_msg"]; ?></span>
-<script>var SITEROOT = '<?php echo SITEROOT; ?>';</script>
-<?php unset($_SESSION["routetrac-admin"]["error_success_msg"]); ?>
-<?php
-include ROOTPATH . '/admin/templates/admin_footer_start.php';
-?>
-<!--  <script src="https://maps.googleapis.com/maps/api/js?key=<?php echo $GOOGLE_DeveloperKey; ?>&sensor=false"></script>-->
-<script src="https://maps.googleapis.com/maps/api/js?key=<?php echo $GOOGLE_DeveloperKey; ?>&sensor=false"></script>
-
-
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+	#fleetMap { height: calc(100vh - 190px); min-height: 420px; border: 1px solid #ddd; }
+	.vlist { height: calc(100vh - 190px); min-height: 420px; overflow-y: auto; }
+	.vcard { border: 1px solid #ddd; border-left: 5px solid #999; border-radius: 4px; padding: 7px 9px; margin-bottom: 7px; cursor: pointer; background: #fff; }
+	.vcard:hover { background: #f5f8fc; }
+	.vcard.live { border-left-color: #5cb85c; } .vcard.stale { border-left-color: #f0ad4e; } .vcard.lost, .vcard.none { border-left-color: #d9534f; }
+	.sig { font-size: 11px; font-weight: bold; }
+	.sig.live { color: #3c763d; } .sig.stale { color: #c77700; } .sig.lost, .sig.none { color: #c9302c; }
+	.vtruck { background: #337ab7; color: #fff; border-radius: 4px; padding: 2px 5px; font-size: 11px; font-weight: bold; white-space: nowrap; box-shadow: 0 1px 3px rgba(0,0,0,.4); }
+	.vtruck.stale { background: #f0ad4e; } .vtruck.lost, .vtruck.none { background: #d9534f; }
+	.vdriver { background: #777; color: #fff; border-radius: 10px; padding: 2px 6px; font-size: 11px; white-space: nowrap; }
+</style>
 <div class="container-fluid detail-page">
-    <div class="page-header">
-        <h4>
-            <div class="clearfix">
-                <div class="pull-left"> <a href="area.php"><span class="section-heading">Google Map</span></a> </div>
-
-            </div>
-        </h4>
-    </div>
-    <div class="row">
-        <div class="col-md-12" id="divList">
-            <div class="clearfix">
-                <form name="form" id="form">
-                    <table width="100%" border="0">
-                        <tr style="height: 55px">
-                            <td>
-                                <select id="driver_id" name="driver_id"  style="width: 70%" class="form-control" onchange="show_data(this.value)">
-                                    <optgroup label="All">
-                                        <option  value="All_Drivers" <?php
-if ($driver_id == "All_Drivers") {
-    echo "selected";
-}
-?>>All Drivers</option>
-                                        <option  value="All_Customer" <?php
-                                                 if ($driver_id == "All_Customer") {
-                                                     echo "selected";
-                                                 }
-                                                 ?>>All Customer</option>
-                                        <option  value="All_Drivers_And_Customer" <?php
-                                                 if ($driver_id == "All_Drivers_And_Customer") {
-                                                     echo "selected";
-                                                 }
-                                                 ?>>All Drivers And Customer</option>
-                                    </optgroup>
-                                    <optgroup label="Particular Driver">
-<?php
-$db_get_driver = new database();
-$query_get_driver = "SELECT D.delivery_id,D.order_number,U.first_name,U.last_name,U.user_id,U.latitude,U.longitude FROM deliveries D  LEFT JOIN users U ON  D.driver_id = U.user_id WHERE D.status='In Transit' AND  scheduled_delivery='".$CURDATE."' GROUP BY U.user_id";
-$db_get_driver->myCustomQuery($query_get_driver);
-if ($db_get_driver->row_count > 0) {
-    for ($i = 0; $i < $db_get_driver->row_count; $i++) {
-        $db_get_driver->moveto($i);
-        $latitude = $db_get_driver->f_latitude;
-        $longitude = $db_get_driver->f_longitude;
-        $name = ucfirst($db_get_driver->f_first_name) . " " . ucfirst($db_get_driver->f_last_name);
-        $id = $db_get_driver->f_user_id;
-        ?>
-
-                                                <option value="<?= $id ?>" <?php
-                                        if ($driver_id == $id) {
-                                            echo "selected";
-                                        }
-        ?>><?= $name ?></option>
-                                                <?php
-                                                    }
-                                                }
-                                                ?>
-                                    </optgroup>
-
-                                </select>
-                            </td>
-                            <td>
-                               
-                                Start Date : <input class="" type="text" name="date_range_from" id="date_range_from" placeholder="Start Date" style="width: 20%" disabled="">    End Date :  <input class="" type="text" id="date_range_to" name="date_range_to" placeholder="End Date" style="width: 20%" disabled="">
-                             
-                            </td>
-                           
-                        </tr>
-                      
-                        <tr style="height: 55px">
-                            <td coslpan="100%">
-                           
-                       
-                            <button type="submit" class="btn btn-info">Generate</button>
-                      
-                            </td>
-                        </tr>
-                    </table>
-                </form>
-
-                <div class="row" id="row_list">
-                    <div class="col-md-12">
-                        <div id="MyAjaxInterView">
-
-
-                        </div>
-                    </div>
-                </div>
-            </div>
+  <div class="page-header">
+    <h4>
+      <div class="clearfix">
+        <div class="pull-left"><span class="section-heading">Live Fleet Map</span>
+          <small id="updated" class="text-muted"></small></div>
+        <div class="pull-right">
+          <form class="form-inline" id="historyForm" onsubmit="loadHistory(); return false;">
+            <label class="radio-inline"><input type="radio" name="mode" value="live" checked onchange="setMode()"> Live</label>
+            <label class="radio-inline"><input type="radio" name="mode" value="history" onchange="setMode()"> History</label>
+            <span id="historyFields" style="display:none">
+              &nbsp;<select id="h_driver" class="form-control input-sm"><option value="">Driver</option>
+                <?php foreach ($drivers as $d) { ?><option value="<?= (int) $d['user_id'] ?>"><?= fleet::h(fleet::driver_name($d)) ?></option><?php } ?></select>
+              <input type="date" id="h_from" class="form-control input-sm" value="<?= date("Y-m-d") ?>">
+              <input type="date" id="h_to" class="form-control input-sm" value="<?= date("Y-m-d") ?>">
+              <button type="submit" class="btn btn-info btn-sm">Show Track</button>
+            </span>
+          </form>
         </div>
-
+      </div>
+    </h4>
+  </div>
+  <div class="row">
+    <div class="col-md-3">
+      <div class="vlist" id="vlist"><p class="text-muted">Loading...</p></div>
     </div>
+    <div class="col-md-9">
+      <div id="fleetMap"></div>
+      <p class="small text-muted" style="margin-top:4px">
+        <span class="sig live">&#9632;</span> reported in the last 5 min &nbsp; <span class="sig stale">&#9632;</span> 5-30 min &nbsp; <span class="sig lost">&#9632;</span> no signal for over 30 min
+        &nbsp;&middot;&nbsp; <span style="color:#999">&#9679;</span> driver not on a trip (hover for name) &nbsp; <span style="color:#5cb85c">&#9679;</span> delivered stop <span style="color:#f0ad4e">&#9679;</span> refused / exception
+        &nbsp;&middot;&nbsp; Times in <?= fleet::h(company_settings::tz_label()) ?> &middot; refreshes every 30 s
+      </p>
+    </div>
+  </div>
 </div>
-
-<!--jquery.blockUI-->
-<script type="text/javascript" src="<?php echo SITEROOT; ?>/admin/templates/js/jquery/blockUI/jquery.blockUI.js"></script>
-<script>
- $(function () {
-
-        $('#date_range_from').datepicker({
-            format: 'yyyy-mm-dd',
-            "setDate": new Date(),
-            "autoclose": true
-        });
-        $('#date_range_to').datepicker({
-            format: 'yyyy-mm-dd',
-            "setDate": new Date(),
-            "autoclose": true
-        });
-
-    });
-</script>
-<script type="text/javascript" src="js/locate_drivers.js"></script>
-<?php
-include ROOTPATH . '/admin/templates/admin_footer_end.php';
-?>
+<?php include ROOTPATH . '/admin/templates/admin_footer_start.php'; ?>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script type="text/javascript" src="js/locate_drivers.js?v=<?= filemtime(__DIR__ . "/js/locate_drivers.js") ?>"></script>
+<?php include ROOTPATH . '/admin/templates/admin_footer_end.php'; ?>

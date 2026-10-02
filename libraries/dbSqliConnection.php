@@ -23,6 +23,8 @@ class dbSqlConnection {
             printf("Connect failed: %s\n", $this->conn->connect_error);
             exit();
         }
+        // NOW() / CURDATE() follow the company timezone (see company_settings::apply)
+        $this->conn->query("SET time_zone='" . date('P') . "'");
         return $this->conn;
     }
 

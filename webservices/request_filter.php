@@ -6,14 +6,14 @@
  */
 
 // ids: a number or a comma separated list of numbers
-foreach (array('driver_id', 'route_id', 'customer_id', 'delivery_id', 'delivery_ids', 'item_id', 'package_id', 'packages_id', 'user_id') as $filter_param) {
+foreach (array('driver_id', 'route_id', 'customer_id', 'delivery_id', 'delivery_ids', 'item_id', 'package_id', 'packages_id', 'user_id', 'trip_id') as $filter_param) {
     if (isset($_REQUEST[$filter_param]) && is_string($_REQUEST[$filter_param])) {
         $_REQUEST[$filter_param] = preg_replace('/[^0-9,]/', '', $_REQUEST[$filter_param]);
     }
 }
 
 // quantities: numbers or comma separated lists of numbers
-foreach (array('qty', 'package_qty', 'item_qty') as $filter_param) {
+foreach (array('qty', 'package_qty', 'item_qty', 'amount', 'odometer', 'odometer_km', 'fuel_litres', 'latitude', 'longitude', 'recorded_at', 'accuracy') as $filter_param) {
     if (isset($_REQUEST[$filter_param]) && is_string($_REQUEST[$filter_param])) {
         $_REQUEST[$filter_param] = preg_replace('/[^0-9,.\-]/', '', $_REQUEST[$filter_param]);
     }

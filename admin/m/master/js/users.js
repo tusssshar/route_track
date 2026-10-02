@@ -61,9 +61,11 @@
         function show_routes(){
             if(document.getElementById("is_driver").checked==true){
                    document.getElementById("route_div").style.display = "block";
+                   $(".driver-field").show();
             }else{
                  $("#default_route_id").val("");
                 document.getElementById("route_div").style.display = "none";
+                $(".driver-field").hide();
                
             }
                            

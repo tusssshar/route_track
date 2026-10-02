@@ -17,3 +17,9 @@ nbproject/private/
 
 # schema + reference data only (no customer data)
 !database/*.sql
+
+# migrations are code, not data
+!database/migrations/
+!database/migrations/*.sql
+# access rules inside upload folders (driver_docs must never be web-readable)
+!uploads/*/.htaccess

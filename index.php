@@ -45,39 +45,71 @@ include(ROOTPATH . '/admin/templates/admin_header_start.php');
 include(ROOTPATH . '/admin/templates/admin_header_end.php');
 ?>
 
-<div class="container-fluid login-page">
-    <div class="col-lg-4 col-md-4 col-sm-5 col-xs-11 col-lg-offset-4 col-md-offset-7 col-sm-offset-6">
-        <div class="login-form">
+<div class="rt-login">
+    <div class="rt-login-hero">
+        <div class="rt-login-brand"><?= company_settings::brand_html(true) ?></div>
+        <div>
+            <h1>Every route, every vehicle, <span>live.</span></h1>
+            <p class="lead">Plan trips, assign drivers and vehicles, track deliveries on the map and close every trip with a complete trip sheet.</p>
+            <ul class="rt-login-points">
+                <li><i class="fa fa-map-marker"></i> Live GPS tracking</li>
+                <li><i class="fa fa-truck"></i> Driver &amp; vehicle dispatch</li>
+                <li><i class="fa fa-cubes"></i> SKU load on every vehicle</li>
+                <li><i class="fa fa-road"></i> Toll, tax &amp; fuel per trip</li>
+                <li><i class="fa fa-check-square-o"></i> Proof of delivery</li>
+                <li><i class="fa fa-file-text-o"></i> Trip sheet &amp; settlement</li>
+            </ul>
+        </div>
+        <div class="rt-road-scene" aria-hidden="true">
+            <svg viewBox="0 0 1400 150" preserveAspectRatio="xMinYMax slice">
+                <path d="M0 70 C 250 30, 450 110, 700 70 S 1150 30, 1400 70 L1400 150 L0 150 Z" fill="rgba(255,255,255,.05)"/>
+                <rect x="0" y="92" width="1400" height="58" fill="rgba(0,0,0,.35)"/>
+                <line class="rt-dash" x1="0" y1="121" x2="1400" y2="121" stroke="var(--rt-stripe)" stroke-width="4"/>
+                <g transform="translate(330,64)"><circle class="rt-pin" r="9" fill="var(--rt-primary)"/><circle r="5" fill="var(--rt-primary)"/></g>
+                <g transform="translate(640,58)"><circle class="rt-pin" r="9" fill="var(--rt-accent)"/><circle r="5" fill="var(--rt-accent)"/></g>
+                <g class="rt-truck">
+                    <g transform="translate(0,72)">
+                        <rect x="0" y="8" width="70" height="34" rx="4" fill="var(--rt-primary)"/>
+                        <path d="M70 18 h20 l14 14 v10 h-34 z" fill="#e5e7eb"/>
+                        <rect x="76" y="21" width="12" height="9" rx="1" fill="#93c5fd"/>
+                        <circle cx="18" cy="44" r="7" fill="#111827"/><circle cx="18" cy="44" r="3" fill="#9ca3af"/>
+                        <circle cx="88" cy="44" r="7" fill="#111827"/><circle cx="88" cy="44" r="3" fill="#9ca3af"/>
+                    </g>
+                </g>
+            </svg>
+        </div>
+    </div>
+    <div class="rt-login-side">
+        <div class="rt-login-card">
+            <h2>Welcome back</h2>
+            <div class="sub">Sign in to <?= htmlspecialchars(company_settings::get("system_name")) ?></div>
             <? if($error){?>
-            <div class="alert alert-danger">
-<?= $error ?>
-            </div>
+            <div class="alert alert-danger"><?= $error ?></div>
             <? }?>
             <? if($success){?>
-            <div class="alert alert-success">
-<?= $success ?>
-            </div>
+            <div class="alert alert-success"><?= $success ?></div>
             <? }?>
-            <form rolo="form" method="post" class="" id="frmLoginForm" name="frmLoginForm">
+            <form method="post" id="frmLoginForm" name="frmLoginForm">
+                <div id="common_error_div" class="validation_div"></div>
                 <div class="form-group">
-                    <div id="common_error_div" class="validation_div"></div>
-                    <input type="text" placeholder="USERNAME" name="al_username" id="al_username" class="form-control" />
+                    <label for="al_username">Username</label>
+                    <div class="input-group"><span class="input-group-addon"><i class="fa fa-user"></i></span>
+                        <input type="text" placeholder="Your username" name="al_username" id="al_username" class="form-control" autocomplete="username" /></div>
                 </div>
                 <div class="form-group">
-                    <input type="password" placeholder="PASSWORD" name="al_password" id="al_password" class="form-control" />
+                    <label for="al_password">Password</label>
+                    <div class="input-group"><span class="input-group-addon"><i class="fa fa-lock"></i></span>
+                        <input type="password" placeholder="Your password" name="al_password" id="al_password" class="form-control" autocomplete="current-password" /></div>
                 </div>
-                <div class="form-group">
-                    <input type="submit" name="submit" id="submit" class="btn btn-default" value="SIGN IN" />
+                <div class="form-group" style="margin-top:22px">
+                    <button type="submit" name="submit" id="submit" value="SIGN IN" class="btn btn-primary"><i class="fa fa-sign-in"></i>&nbsp; Sign in</button>
                 </div>
             </form>
+            <div class="rt-help">Drivers: use the driver app or <a href="<?= SITEROOT ?>/driver/">driver page</a><?php
+                $phone = company_settings::get("support_phone"); echo $phone != "" ? "<br>Support " . htmlspecialchars($phone) : ""; ?></div>
         </div>
     </div>
 </div>
-<br />
-<br />
-<br />
-<br />
-<br />
 <?php
 include ROOTPATH . '/admin/templates/admin_footer_start.php';
 ?>
@@ -108,6 +140,9 @@ include ROOTPATH . '/admin/templates/admin_footer_start.php';
             success: function (label) {
                 // set &nbsp; as text for IE
                 label.hide();
+            },
+            errorPlacement: function (error, element) {
+                error.insertAfter(element.closest(".input-group"));
             }
         });
 

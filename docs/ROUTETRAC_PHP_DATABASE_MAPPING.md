@@ -80,7 +80,7 @@ Same pattern, different tables:
 | | |
 |---|---|
 | UI | `admin/m/google_map/locate_drivers.php` — driver `<select>` from `SELECT ... FROM users WHERE is_driver=1` (or all in-transit); Google Maps JS API |
-| AJAX | `admin/m/google_map/ajax/locate_drivers.php` |
+| AJAX | `admin/m/google_map/ajax/live_positions.php` (JSON; OpenStreetMap/Leaflet) |
 | Driver positions | `SELECT D.delivery_id,D.order_number,U.first_name,U.last_name,U.user_id,U.latitude,U.longitude FROM deliveries D LEFT JOIN users U ON D.driver_id=U.user_id WHERE D.status='In Transit' AND scheduled_delivery='{today}' GROUP BY U.user_id` |
 | Stop positions | `SELECT ... FROM deliveries D LEFT JOIN customers C ON D.customer_id=C.customer_id WHERE D.status='In Transit' AND scheduled_delivery='{today}' AND D.latitude!='' AND longitude!=''` |
 | Tables | `deliveries`,`users`,`customers` |

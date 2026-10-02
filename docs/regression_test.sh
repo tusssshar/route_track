@@ -37,7 +37,7 @@ echo "== Login"
 check "admin login" "$(curl -s -c "$JAR" -o /dev/null -w '%{http_code}' -d 'al_username=admin&al_password=12345&submit=SIGN+IN' $BASE/index.php)" "302"
 
 echo "== Every admin page / endpoint loads"
-for f in $(cd "$APP" && find admin -name "*.php" | grep -vE "_BK_|templates|logout|authorized|_2017|_19_3_19|skills|points_consumption|manage_master|index1|admin/test.php|includes/" | sort); do
+for f in $(cd "$APP" && find admin -name "*.php" | grep -vE "_BK_|templates|logout|authorized|_2017|_19_3_19|skills|points_consumption|manage_master|index1|admin/test.php|includes/|driver_doc" | sort); do
   c=$(code "$f"); [ "$c" = "200" ] && ok "$f" || bad "$f" "HTTP $c"
 done
 
@@ -119,6 +119,15 @@ has "delete area"      "$(curl -s -X POST $BASE/webservice-dipali/delete_area.ph
 echo "== Cleanup deletes"
 for d in "customer_address.php?delete_id=$ADID" "users.php?delete_id=$UID_" "customer.php?delete_id=$CID" "packages.php?delete_id=$PID" "routes.php?delete_id=$RID" "area.php?delete_id=$AID"; do code "admin/m/master/ajax/$d" >/dev/null; done
 check "deletes removed rows" "$(q "select (select count(*) from areas where area_id=$AID)+(select count(*) from customers where customer_id=$CID)+(select count(*) from users where user_id=$UID_)")" "0"
+# The test manifest, its orders, POD files and the driver's GPS / route-accept rows (no UI delete for these)
+DIDS=$(q "select ifnull(group_concat(delivery_id),0) from deliveries where manifest_id=$MID" | tr -d '\r')
+q "select server_filename from signature_pics where signature_pic_id in (select signature_pic_id from deliveries where delivery_id in ($DIDS))" | tr -d '\r' | while IFS= read -r f; do [ -n "$f" ] && rm -f "$APP/uploads/signature/$f"; done
+q "select product_file_path from product_pics where delivery_id in ($DIDS)" | tr -d '\r' | while IFS= read -r f; do [ -n "$f" ] && rm -f "$APP/uploads/product_pics/$(basename "$f")"; done
+q "delete from signature_pics where signature_pic_id in (select signature_pic_id from deliveries where delivery_id in ($DIDS)); delete from product_pics where delivery_id in ($DIDS);
+   delete from driver_photos where delivery_id in ($DIDS); delete from delivery_items where delivery_id in ($DIDS); delete from delivery_packages where delivery_id in ($DIDS);
+   delete from deliveries where delivery_id in ($DIDS); delete from manifests where manifest_id=$MID;
+   delete from route_accept where driver_id=$UID_; delete from driver_location where driver_id=$UID_"
+check "test manifest and orders removed" "$(q "select (select count(*) from manifests where manifest_id=$MID)+(select count(*) from deliveries where manifest_id=$MID)")" "0"
 
 echo "== PHP fatal errors during run"
 N=$(grep -cE "Fatal|Uncaught" "$APP/logs/php_errors.log"); check "no PHP fatals" "$N" "0"

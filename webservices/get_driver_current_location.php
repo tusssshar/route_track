@@ -7,38 +7,30 @@ $app_key = $_REQUEST['app_key'];
 include_once("../bootstrap.php");
 include_once('message.php');
 
-$driver_id = $_REQUEST['driver_id'];
-$latitude = $_REQUEST['latitude'];
-$longitude = $_REQUEST['longitude'];
-
-
-
-$result = array();
-$data = array();
-if ($driver_id != "" && $latitude != "" && $longitude != "") {
-
-    //ADD CURRENT LOCATION
-    $db = new database();
-    $db->data("driver_id ", $driver_id);
-    $db->data("latitude", $latitude);
-    $db->data("longitude", $longitude);
-    $db->insert("driver_location");
-
-    //UPDATE CURRENT LOCATION
-    $db_update_current_location = new database();
-    $db_update_current_location->data("latitude", $latitude);
-    $db_update_current_location->data("longitude", $longitude);
-    $db_update_current_location->where("user_id=" . $driver_id);
-    $db_update_current_location->update("users");
-
-
-
-    $json = array($RESPONSE_KEY => $RESPONSE_SUCCESS, 'msg' => 'Success', 'info' => $result);
-    echo json_encode($json);
-} else {
-    $json = array($RESPONSE_KEY => $RESPONSE_ERROR, 'msg' => 'Please pass all parameter', 'last_id' => '0');
-    echo json_encode($json);
+/*
+ * params: driver_id + either
+ *   latitude, longitude [, recorded_at (unix s or ms, when the phone took the reading), accuracy (m)]
+ *   or points = JSON [{"lat":..,"lng":..,"t":ms,"acc":m}, ...]   (readings queued while offline)
+ * Points are tagged with the trip the driver was running at that moment and stored in company time.
+ */
+$driver_id = isset($_REQUEST['driver_id']) ? $_REQUEST['driver_id'] : '';
+if ($driver_id == '' || (!isset($_REQUEST['points']) && (!isset($_REQUEST['latitude']) || $_REQUEST['latitude'] === '' || !isset($_REQUEST['longitude']) || $_REQUEST['longitude'] === ''))) {
+    echo json_encode(array($RESPONSE_KEY => $RESPONSE_ERROR, 'msg' => 'Please pass all parameter', 'last_id' => '0'));
+    exit;
 }
+
+if (isset($_REQUEST['points'])) {
+    list($accepted, $rejected, $trip_id) = fleet::record_locations($driver_id, $_REQUEST['points']);
+    $ok = $accepted > 0;
+    $info = array('trip_id' => (string) $trip_id, 'accepted' => $accepted, 'rejected' => $rejected);
+    $msg = $ok ? 'Success' : 'No valid points';
+} else {
+    $result = fleet::record_location($driver_id, $_REQUEST['latitude'], $_REQUEST['longitude'],
+        isset($_REQUEST['recorded_at']) ? $_REQUEST['recorded_at'] : null, isset($_REQUEST['accuracy']) ? $_REQUEST['accuracy'] : null);
+    $ok = is_int($result);
+    $info = array('trip_id' => $ok ? (string) $result : '0');
+    $msg = $ok ? 'Success' : 'Location refused: ' . $result;
+}
+echo json_encode(array($RESPONSE_KEY => $ok ? $RESPONSE_SUCCESS : $RESPONSE_ERROR, 'msg' => $msg, 'info' => $info,
+    'server_time' => date('Y-m-d H:i:s'), 'timezone' => company_settings::get('timezone')));
 ?>
-
-
